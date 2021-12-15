@@ -601,7 +601,7 @@ class DisentangledSelfAttention(torch.nn.Module):
         attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
         if self.relative_attention:
             rel_embeddings = self.pos_dropout(rel_embeddings)
-            rel_att = self.disentangled_att_bias(query_layer, key_layer, relative_pos, rel_embeddings, scale_factor)
+            rel_att = self.disentangled_att_bias(query_layer, key_layer, relative_pos, rel_embeddings, scale_factor) # ========相对注意力的计算.
 
         if rel_att is not None:
             attention_scores = attention_scores + rel_att
@@ -640,9 +640,9 @@ class DisentangledSelfAttention(torch.nn.Module):
         relative_pos = relative_pos.long().to(query_layer.device)
         rel_embeddings = rel_embeddings[
             self.max_relative_positions - att_span : self.max_relative_positions + att_span, :
-        ].unsqueeze(0) # 取使用的部分embeding
+        ].unsqueeze(0) # 取使用的部分embeding======因为embeddign是正负概念,
         if "c2p" in self.pos_att_type or "p2p" in self.pos_att_type: # 如果p在后面位置需要计算,那么就需要pos key
-            pos_key_layer = self.pos_proj(rel_embeddings)
+            pos_key_layer = self.pos_proj(rel_embeddings) # key的position
             pos_key_layer = self.transpose_for_scores(pos_key_layer)
 
         if "p2c" in self.pos_att_type or "p2p" in self.pos_att_type: # 如果p在前面就需要算pos query
@@ -657,7 +657,7 @@ class DisentangledSelfAttention(torch.nn.Module):
             c2p_att = torch.gather(c2p_att, dim=-1, index=c2p_dynamic_expand(c2p_pos, query_layer, relative_pos))  # gather 最后一个维度, 取索引是index.  具体看 https://pytorch.org/docs/stable/generated/torch.gather.html?highlight=gather#torch.gather
             score += c2p_att
 
-        # position->content
+# position->content
         if "p2c" in self.pos_att_type or "p2p" in self.pos_att_type:
             pos_query_layer /= math.sqrt(pos_query_layer.size(-1) * scale_factor)
             if query_layer.size(-2) != key_layer.size(-2):
